@@ -15,18 +15,22 @@ def main():
 			consumer_secret = f.readline().strip()
 			access_token = f.readline().strip()
 			access_token_secret = f.readline().strip()
+			geocoding_api_key = f.readline().strip()
 
-		# connect with the API
+		# connect with the twitter api
 		api: tweepy.API = connect(consumer_key, consumer_secret, access_token, access_token_secret)
 
+		# initialize geocoding api
+		Tweet.init(geocoding_api_key)
+
 		# define number of tweets to retrieve
-		num_tweets: int = 1000
+		num_tweets: int = 100
 
 		# define keywords
 		keywords = COVID_KEYWORDS[:2]  # corona and covid
 
 		# get all tweets in a list
-		tweets: List[Tweet] = get_tweets(api, num_tweets, keywords)
+		tweets: List[Tweet] = get_tweets(api, num_tweets, keywords, language=None)
 		with open('tweets/tweets.pickle', 'wb') as f:
 			pickle.dump(tweets, f)
 
@@ -36,13 +40,14 @@ def main():
 	else:
 		with open('tweets/tweets.pickle', 'rb') as f:
 			tweets = pickle.load(f)
-		print(f'number of tweets: {len(tweets)}')
-		print(tweets[0])
 
 		with open('tweets/tweets_with_place.pickle', 'rb') as f:
 			tweets_with_place = pickle.load(f)
-		print(f'number of tweets with a place: {len(tweets_with_place)}')
-		print(tweets_with_place[0])
+
+	print(f'number of tweets: {len(tweets)}')
+	print(tweets[0])
+	print(f'number of tweets with a place: {len(tweets_with_place)}')
+	print(tweets_with_place[0])
 
 	num_tweets_per_country_per_continent_absolute = defaultdict(lambda: defaultdict(int))
 	num_tweets_per_country_absolute = defaultdict(lambda: defaultdict(int))
@@ -84,7 +89,7 @@ def connect(consumer_key: str, consumer_secret: str, access_token: str, access_t
 	    The consumer_secret as can be found on the Twitter App Page
 	access_token : str
 	    The access_token as can be found on the Twitter App Page
-	acces_token_secret : str
+	access_token_secret : str
 	    The acces_token_secret as can be found on the Twitter App Page
 
 	Returns

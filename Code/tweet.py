@@ -1,6 +1,7 @@
 from datetime import datetime
-from typing import List, Union
+from typing import List, Union, Dict
 
+from geopy.geocoders import GoogleV3
 from pycountry_convert import country_alpha2_to_continent_code, convert_continent_code_to_continent_name
 from tweepy.models import Status
 
@@ -9,6 +10,11 @@ class Tweet:
 	"""
 	A wrapper around tweepy's Status object.
 	"""
+	google: Union[GoogleV3, None] = None
+
+	@staticmethod
+	def init(geocoding_api_key: str) -> None:
+		Tweet.google: GoogleV3 = GoogleV3(api_key=geocoding_api_key)
 
 	def __init__(self, status: Status):
 		"""
@@ -31,7 +37,7 @@ class Tweet:
 		username : str
 			the username of the author, with the '@' upfront
 		hashtags : List[str]
-			a list of hashtags
+			a list of hashtags, with the '#' upfront
 		datetime : datetime
 			the date and time at which the tweet was created
 		country_code : Union[str, None]
@@ -47,11 +53,35 @@ class Tweet:
 		self.text: str = status.full_text
 		self.name: str = status.author.name
 		self.username: str = f'@{status.author.screen_name}'
-		self.hashtags: List[str] = status.entities['hashtags']
+		self.hashtags: List[str] = [f'#{hashtag["text"]}' for hashtag in status.entities['hashtags']]
 		self.datetime: datetime = status.created_at
-		self.country_code: Union[str, None] = status.place.country_code if status.place is not None else None
+		self.country_code: None = None
+		if status.place is not None and status.place.country_code is not None and status.place.country_code != '':
+			# use place from tweet
+			self.country_code: int = status.place.country_code
+		elif status.author.location is not None and status.author.location != '':
+			# use place form author by looking it op on Google
+			query = status.author.location
+			try:
+				location = Tweet.google.geocode(query=query)
+				if location is not None and location.raw is not None and location.raw[
+					'address_components'] is not None and location.raw['address_components']:
+					address_component: List[Dict[str, str]] = location.raw['address_components']
+					country_code: Union[str, None] = address_component[-1]['short_name'] if 'country' in \
+					                                                                        address_component[-1][
+						                                                                        'types'] else None
+
+					if country_code is None:
+						country_code: Union[str, None] = address_component[-2]['short_name'] if 'country' in \
+						                                                                        address_component[-2][
+							                                                                        'types'] else None
+
+					self.country_code: str = country_code
+			except:
+				self.country_code: None = None
+
 		self.continent: Union[str, None] = convert_continent_code_to_continent_name(
-			country_alpha2_to_continent_code(status.place.country_code)) if status.place is not None else None
+			country_alpha2_to_continent_code(self.country_code)) if self.country_code else None
 
 		self.denier: Union[bool, None] = None
 

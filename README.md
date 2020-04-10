@@ -13,3 +13,4 @@
   * NLTK 3.4.5
   * pygal-maps-world 1.0.2
   * pycountry_convert 0.7.2
+  * geopy 1.21.0
