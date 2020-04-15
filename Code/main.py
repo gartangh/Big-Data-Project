@@ -6,9 +6,6 @@ import tweepy
 from tweet import Tweet
 from visualization import visualize
 
-import nlp
-import pandas as pd
-
 
 def main():
 	if not LOAD:
@@ -30,7 +27,7 @@ def main():
 		num_tweets: int = 100
 
 		# define keywords
-		#keywords = COVID_KEYWORDS[:2]  # corona and covid
+		# keywords = COVID_KEYWORDS[:2]  # corona and covid
 		keywords = COVID_FAKE_KEYWORDS
 
 		# get all tweets in a list
@@ -49,11 +46,9 @@ def main():
 			tweets_with_place = pickle.load(f)
 
 	print(f'number of tweets: {len(tweets)}')
-	#print(tweets[0])
+	# print(tweets[0])
 	print(f'number of tweets with a place: {len(tweets_with_place)}')
-	#print(tweets_with_place[0])
-
-
+	# print(tweets_with_place[0])
 
 	num_tweets_per_country_per_continent_absolute = defaultdict(lambda: defaultdict(int))
 	num_tweets_per_country_absolute = defaultdict(lambda: defaultdict(int))
@@ -214,11 +209,12 @@ if __name__ == "__main__":
 		'North America': 'north_america',
 		'South America': 'south_america',
 		'Oceania': 'oceania',
-		'Antartica': 'antartica',
+		'Antarctica': 'antartica',
 	}
 
 	LOAD: bool = True
 
 	tweets_path: str = 'tweets/nlp/tweets_fake_en_all_446.pickle'
 	tweets_places_path: str = 'tweets/nlp/tweets_with_place_fake_en_all_446.pickle'
+
 	main()

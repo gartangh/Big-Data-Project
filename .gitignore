@@ -76,7 +76,5 @@ venv/
 *.zip
 *.exe
 Code/tokens.txt
-Code/images/
 .idea/
 Code/__pycache__/
-*.svg
