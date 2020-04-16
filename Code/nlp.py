@@ -79,16 +79,16 @@ def main():
 	with open(tweets_fake_2_path, 'rb') as f:
 		tweets_fake_2 = pickle.load(f)
 
-	with open(tweets_notfake_2_path, 'rb') as f:
+	with open(tweets_notfake_path, 'rb') as f:
 		tweets_not_fake = pickle.load(f)
 
-	with open(tweets_notfake_path, 'rb') as f:
+	with open(tweets_notfake_2_path, 'rb') as f:
 		tweets_not_fake_2 = pickle.load(f)
 
 	# Options for debugging purposes
 	pd.set_option('display.max_columns', None)
 	pd.set_option('display.width', None)
-	pd.set_option('display.max_colwidth', None)
+	#pd.set_option('display.max_colwidth', None)
 	# ------------------------------------------------------------------
 
 	# STEP 2: CREATE DATAFRAMES ----------------------------------------
@@ -192,7 +192,7 @@ def main():
 	# ------------------------------------------------------------------
 
 	# STEP 10: IMPROVEMENT OF TOKENIZATION? ----------------------------
-	print("Improvement Decision Tree: " + str(accuracy_naive_bayes_new - accuracy_naive_bayes))
+	print("\nImprovement Decision Tree: " + str(accuracy_naive_bayes_new - accuracy_naive_bayes))
 	print("Improvement Decision Tree: " + str(accuracy_decision_tree_new - accuracy_decision_tree))
 	# ------------------------------------------------------------------
 
