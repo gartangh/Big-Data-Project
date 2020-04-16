@@ -14,21 +14,64 @@ class Tweet:
 
 	@staticmethod
 	def init(geocoding_api_key: str) -> None:
-		Tweet.google: GoogleV3 = GoogleV3(api_key=geocoding_api_key)
+		Tweet.google = GoogleV3(api_key=geocoding_api_key)
+
+	@staticmethod
+	def get_location(status: Status):
+		# set default values
+		country_code: None = None
+		continent: None = None
+
+		if status.place is not None \
+				and status.place.country_code is not None \
+				and status.place.country_code != '' \
+				and len(status.place.country_code) == 2:
+			# use place from tweet
+			country_code: str = status.place.country_code
+		elif status.author.location is not None and status.author.location != '':
+			# use place form author by looking it op on Google's geolocation api
+			try:
+				query = status.author.location
+				location = Tweet.google.geocode(query=query)
+				if location is not None and location.raw is not None and location.raw[
+					'address_components'] is not None and location.raw['address_components']:
+					address_component: List[Dict[str, str]] = location.raw['address_components']
+					country_code: Union[str, None] = address_component[-1]['short_name'] if 'country' in \
+					                                                                        address_component[-1][
+						                                                                        'types'] else None
+
+					if country_code is None:
+						country_code: Union[str, None] = address_component[-2]['short_name'] if 'country' in \
+						                                                                        address_component[-2][
+							                                                                        'types'] else None
+
+					country_code: str = country_code
+			except:
+				pass
+
+		if country_code is not None:
+			if country_code == 'AQ':
+				# special case
+				continent: str = 'Antarctica'
+			else:
+				continent: str = convert_continent_code_to_continent_name(
+					country_alpha2_to_continent_code(country_code))
+
+		return country_code, continent
 
 	def __init__(self, status: Status):
 		"""
 		Constructs a new Tweet object from a tweepy's Status object.
 
 		Parameters
-	    ----------
-	    status : Status
-	        the provided status
-
-	    Properties
 		----------
 		status : Status
-		    the provided status
+			the provided status
+
+		Properties
+		----------
+		status : Status
+			the provided status
 
 		text : str
 			the text
@@ -55,33 +98,7 @@ class Tweet:
 		self.username: str = f'@{status.author.screen_name}'
 		self.hashtags: List[str] = [f'#{hashtag["text"]}' for hashtag in status.entities['hashtags']]
 		self.datetime: datetime = status.created_at
-		self.country_code: None = None
-		if status.place is not None and status.place.country_code is not None and status.place.country_code != '':
-			# use place from tweet
-			self.country_code: int = status.place.country_code
-		elif status.author.location is not None and status.author.location != '':
-			# use place form author by looking it op on Google
-			query = status.author.location
-			try:
-				location = Tweet.google.geocode(query=query)
-				if location is not None and location.raw is not None and location.raw[
-					'address_components'] is not None and location.raw['address_components']:
-					address_component: List[Dict[str, str]] = location.raw['address_components']
-					country_code: Union[str, None] = address_component[-1]['short_name'] if 'country' in \
-					                                                                        address_component[-1][
-						                                                                        'types'] else None
-
-					if country_code is None:
-						country_code: Union[str, None] = address_component[-2]['short_name'] if 'country' in \
-						                                                                        address_component[-2][
-							                                                                        'types'] else None
-
-					self.country_code: str = country_code
-			except:
-				self.country_code: None = None
-
-		self.continent: Union[str, None] = convert_continent_code_to_continent_name(
-			country_alpha2_to_continent_code(self.country_code)) if self.country_code else None
+		self.country_code, self.continent = Tweet.get_location(status)
 
 		self.denier: Union[bool, None] = None
 
@@ -89,10 +106,10 @@ class Tweet:
 		"""
 		Pretty-prints a Tweet object.
 
-	    Returns
-	    -------
-	    str
-	        pretty-print of the tweet
+		Returns
+		-------
+		str
+			pretty-print of the tweet
 		"""
 		return f'{self.text}\n \
 				Author:\t{self.name}\n \
@@ -107,15 +124,15 @@ class Tweet:
 		Checks if this tweet contains the provided hashtag.
 
 		Parameters
-	    ----------
-	    hashtag : str
-	        the provided hashtag
+		----------
+		hashtag : str
+			the provided hashtag
 
-	    Returns
-	    -------
-	    bool
-	        True if the provided hashtag is in the tweet's list of hashtags, else False
-	    """
+		Returns
+		-------
+		bool
+			True if the provided hashtag is in the tweet's list of hashtags, else False
+		"""
 		# check parameters
 		assert hashtag is not None, 'Invalid hashtag: hashtag cannot be None'
 		assert hashtag is not '', 'Invalid hashtag: hashtag cannot be an empty string'
@@ -127,14 +144,14 @@ class Tweet:
 		Checks if this tweet contains all the provided hashtags.
 
 				Parameters
-	    ----------
-	    hashtags : List[str]
-	        the provided hashtags
+		----------
+		hashtags : List[str]
+			the provided hashtags
 
-	    Returns
-	    -------
-	    bool
-	        True if all provided hashtags are in the tweet's list of hashtags, else False
+		Returns
+		-------
+		bool
+			True if all provided hashtags are in the tweet's list of hashtags, else False
 		"""
 		assert hashtags is not None, 'Invalid hashtags: hashtags cannot be None'
 		assert hashtags != [], 'Invalid hashtags: hashtags cannot be an empty list'
@@ -258,9 +275,9 @@ class Tweet:
 		Checks if this tweet is classified as a denier.
 
 		Returns
-	    -------
-	    bool
-	        True if the tweet's type is Type.DENIER, else False
+		-------
+		bool
+			True if the tweet's type is Type.DENIER, else False
 		"""
 		return self.denier is True
 
@@ -269,9 +286,9 @@ class Tweet:
 		Checks if this tweet is classified as an acceptor.
 
 		Returns
-	    -------
-	    bool
-	        True if the tweet's type is Type.ACCEPTOR, else False
+		-------
+		bool
+			True if the tweet's type is Type.ACCEPTOR, else False
 		"""
 		return self.denier is False
 
@@ -280,8 +297,28 @@ class Tweet:
 		Checks if this tweet is not yet classified.
 
 		Returns
-	    -------
-	    bool
-	        True if the tweet's type is Type.UNKNOWN, else False
+		-------
+		bool
+			True if the tweet's type is Type.UNKNOWN, else False
 		"""
 		return self.denier is None
+
+	def to_dict(self):
+		"""
+		Used to create a pandas dataframe from a list of Tweets
+
+		Returns
+		-------
+		dictionary
+			dictionary to create pandas dataframe
+		"""
+		return {
+			'name': self.name,
+			'username': self.username,
+			'hashtags': self.hashtags,
+			'datetime': self.datetime,
+			'country_code': self.country_code,
+			'continent': self.continent,
+			'denier': self.denier,
+			'text': self.text
+		}
