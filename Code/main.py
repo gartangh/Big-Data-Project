@@ -5,7 +5,7 @@ from typing import List, Dict
 import tweepy
 from tweet import Tweet
 from visualization import visualize
-
+import nlp
 
 def main():
 	if not LOAD:
@@ -24,11 +24,11 @@ def main():
 		Tweet.init(geocoding_api_key)
 
 		# define number of tweets to retrieve
-		num_tweets: int = 100
+		num_tweets: int = 1
 
 		# define keywords
 		# keywords = COVID_KEYWORDS[:2]  # corona and covid
-		keywords = COVID_FAKE_KEYWORDS
+		keywords = COVID_KEYWORDS + COVID_FAKE_KEYWORDS
 
 		# get all tweets in a list
 		tweets: List[Tweet] = get_tweets(api, num_tweets, keywords, language='en')
@@ -49,6 +49,14 @@ def main():
 	# print(tweets[0])
 	print(f'number of tweets with a place: {len(tweets_with_place)}')
 	# print(tweets_with_place[0])
+
+	# Prediction
+	df_nb = nlp.predict_naive_bayes(tweets)
+	df_dt = nlp.predict_decision_tree(tweets)
+	print("Naive Bayes Prediction: \n")
+	print(df_nb[['text', 'denier']])
+	print("\n\n\nDecision Tree Prediction: \n")
+	print(df_dt[['text', 'denier']])
 
 	num_tweets_per_country_per_continent_absolute = defaultdict(lambda: defaultdict(int))
 	num_tweets_per_country_absolute = defaultdict(lambda: defaultdict(int))
@@ -212,9 +220,13 @@ if __name__ == "__main__":
 		'Antarctica': 'antartica',
 	}
 
+
 	LOAD: bool = True
 
-	tweets_path: str = 'tweets/nlp/tweets_fake_en_all_446.pickle'
-	tweets_places_path: str = 'tweets/nlp/tweets_with_place_fake_en_all_446.pickle'
+	# Use following paths for prediction showcase (contain acceptors and deniers, 1 tweet of each keyword)
+	# tweets_path: str = 'tweets/nlp/tweets_en_test_set_1.pickle'
+	# tweets_places_path: str = 'tweets/nlp/tweets_with_place_en_test_set_1.pickle'
+	tweets_path: str = 'tweets/nlp/tweets_en_test_set_1.pickle'
+	tweets_places_path: str = 'tweets/nlp/tweets_with_place_en_test_set_1.pickle'
 
 	main()
