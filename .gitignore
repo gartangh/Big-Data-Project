@@ -71,14 +71,14 @@ fabric.properties
 .idea/caches/build_file_checksums.ser
 
 # Own
-venv/
-.ipynb_checkpoints/
-*.zip
-*.exe
-*.txt
-*.svg
 .idea/
 __pycache__/
+images/
+models/
+tokens/
+tweets/
+venv/
+*.txt
+*.svg
 *.pickle
-*.pckl
-*.pkl
+*.zip
