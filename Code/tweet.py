@@ -121,107 +121,107 @@ class Tweet:
 
 		return True
 
-	def __eq__(self, other) -> bool:
-		"""
-		Check if the tweet happened at the same time as the other tweet.
-
-		Used for time-based sorting.
-
-		Parameters
-		----------
-		other : Tweet
-			the other tweet, against which the tweet is compared
-
-		Returns
-		-------
-		True if the tweet happened at the same time as the other tweet, else False
-		"""
-		return self.datetime == other.datetime
-
-	def __ne__(self, other) -> bool:
-		"""
-		Check if the tweet happened at the same time as the other tweet.
-
-		Used for time-based sorting.
-
-		Parameters
-		----------
-		other : Tweet
-			the other tweet, against which the tweet is compared
-
-		Returns
-		-------
-		True if the tweet happened at the same time as the other tweet, else False
-		"""
-		return not (self == other)
-
-	def __lt__(self, other) -> bool:
-		"""
-		Check if the tweet happened before the other tweet.
-
-		Used for time-based sorting.
-
-		Parameters
-		----------
-		other : Tweet
-			the other tweet, against which the tweet is compared
-
-		Returns
-		-------
-		True if the tweet happened before the other tweet, else False
-		"""
-		return self.datetime < self.datetime
-
-	def __le__(self, other) -> bool:
-		"""
-		Check if the tweet happened before or at the same time as the other tweet.
-
-		Used for time-based sorting.
-
-		Parameters
-		----------
-		other : Tweet
-			the other tweet, against which the tweet is compared
-
-		Returns
-		-------
-		True if the tweet happened before or at the same time as the other tweet, else False
-		"""
-		return self.datetime <= self.datetime
-
-	def __gt__(self, other) -> bool:
-		"""
-		Check if the tweet happened after the other tweet.
-
-		Used for time-based sorting.
-
-		Parameters
-		----------
-		other : Tweet
-			the other tweet, against which the tweet is compared
-
-		Returns
-		-------
-		True if the tweet happened after the other tweet, else False
-		"""
-		return self.datetime > self.datetime
-
-	def __ge__(self, other) -> bool:
-		"""
-		Check if the tweet happened after or at the same time as the other tweet.
-
-		Used for time-based sorting.
-
-		Parameters
-		----------
-		other : Tweet
-			the other tweet, against which the tweet is compared
-
-		Returns
-		-------
-		True if the tweet happened after or at the same time as the other tweet, else False
-		"""
-		return self.datetime >= self.datetime
+	# def __eq__(self, other: datetime) -> bool:
+	# 	"""
+	# 	Check if the tweet happened at the same time as the other tweet.
+	#
+	# 	Used for time-based sorting.
+	#
+	# 	Parameters
+	# 	----------
+	# 	other : Tweet
+	# 		the other tweet, against which the tweet is compared
+	#
+	# 	Returns
+	# 	-------
+	# 	True if the tweet happened at the same time as the other tweet, else False
+	# 	"""
+	# 	return self.datetime == other
+	#
+	# def __ne__(self, other: datetime) -> bool:
+	# 	"""
+	# 	Check if the tweet happened at the same time as the other tweet.
+	#
+	# 	Used for time-based sorting.
+	#
+	# 	Parameters
+	# 	----------
+	# 	other : Tweet
+	# 		the other tweet, against which the tweet is compared
+	#
+	# 	Returns
+	# 	-------
+	# 	True if the tweet happened at the same time as the other tweet, else False
+	# 	"""
+	# 	return not (self == other)
+	#
+	# def __lt__(self, other) -> bool:
+	# 	"""
+	# 	Check if the tweet happened before the other tweet.
+	#
+	# 	Used for time-based sorting.
+	#
+	# 	Parameters
+	# 	----------
+	# 	other : Tweet
+	# 		the other tweet, against which the tweet is compared
+	#
+	# 	Returns
+	# 	-------
+	# 	True if the tweet happened before the other tweet, else False
+	# 	"""
+	# 	return self.datetime < other
+	#
+	# def __le__(self, other) -> bool:
+	# 	"""
+	# 	Check if the tweet happened before or at the same time as the other tweet.
+	#
+	# 	Used for time-based sorting.
+	#
+	# 	Parameters
+	# 	----------
+	# 	other : Tweet
+	# 		the other tweet, against which the tweet is compared
+	#
+	# 	Returns
+	# 	-------
+	# 	True if the tweet happened before or at the same time as the other tweet, else False
+	# 	"""
+	# 	return self.datetime <= self.datetime
+	#
+	# def __gt__(self, other) -> bool:
+	# 	"""
+	# 	Check if the tweet happened after the other tweet.
+	#
+	# 	Used for time-based sorting.
+	#
+	# 	Parameters
+	# 	----------
+	# 	other : Tweet
+	# 		the other tweet, against which the tweet is compared
+	#
+	# 	Returns
+	# 	-------
+	# 	True if the tweet happened after the other tweet, else False
+	# 	"""
+	# 	return self.datetime > self.datetime
+	#
+	# def __ge__(self, other) -> bool:
+	# 	"""
+	# 	Check if the tweet happened after or at the same time as the other tweet.
+	#
+	# 	Used for time-based sorting.
+	#
+	# 	Parameters
+	# 	----------
+	# 	other : Tweet
+	# 		the other tweet, against which the tweet is compared
+	#
+	# 	Returns
+	# 	-------
+	# 	True if the tweet happened after or at the same time as the other tweet, else False
+	# 	"""
+	# 	return self.datetime >= self.datetime
 
 	def is_denier(self) -> bool:
 		"""
