@@ -1,75 +1,183 @@
 import pickle
 from collections import defaultdict
-from typing import List, Dict
+from typing import List, Dict, Tuple, Union
 
+import nltk
 import tweepy
+from geopy import GoogleV3
+from nltk import re
+from nltk.corpus import stopwords
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.model_selection import train_test_split
+from sklearn.naive_bayes import ComplementNB
+from sklearn.tree import DecisionTreeClassifier
 from tweet import Tweet
 from visualization import visualize
-import nlp
+
 
 def main():
-	if not LOAD:
-		# read API keys
-		with open('tokens.txt') as f:
-			consumer_key = f.readline().strip()
-			consumer_secret = f.readline().strip()
-			access_token = f.readline().strip()
-			access_token_secret = f.readline().strip()
-			geocoding_api_key = f.readline().strip()
+	print()
+	#################################
+	# 1. GET NEW DATASET
+	# 2. ADD LOCATION TO THOSE TWEETS
+	# 3. TRAIN CLASSIFIERS
+	# 4. MAKE PREDICTIONS
+	# 5. USE VARIOUS FILTERS
+	# 6. VISUALIZE
+	#################################
 
-		# connect with the twitter api
-		api: tweepy.API = connect(consumer_key, consumer_secret, access_token, access_token_secret)
 
-		# initialize geocoding api
-		Tweet.init(geocoding_api_key)
+	####################
+	# 1. GET NEW DATASET
+	####################
+	print('\n1. GET NEW DATASET')
+	# read Twitter tokens
+	consumer_key, consumer_secret, access_token, access_token_secret = read_twitter_tokens('tokens/twitter_tokens.txt')
+	# connect with the Twitter API
+	twitter_api: tweepy.API = connect_to_twitter_api(consumer_key, consumer_secret, access_token, access_token_secret)
+	# define keywords
+	keywords: Dict[str, int] = {
+		'covid': 5,  # get 5 tweets with 'covid' in it
+		'coronahoax': 10,  # get 10 with 'coronahoax' in it
+	}
+	# get new dataset
+	new_dataset: List[Tweet] = get_new_tweets(twitter_api, keywords)
+	print(f'First tweet:\n{new_dataset[0]}')
 
-		# define number of tweets to retrieve
-		num_tweets: int = 1
+	#################################
+	# 2. ADD LOCATION TO THOSE TWEETS
+	#################################
+	print('\n2. ADD LOCATION TO THOSE TWEETS')
+	# read Google token
+	geocoding_api_key: str = read_google_token('tokens/google_token.txt')
+	# initialize Google API
+	google_api: GoogleV3 = GoogleV3(api_key=geocoding_api_key)
+	# add location to tweets when possible
+	num_tweets_with_location_before: int = 0
+	num_tweets_with_location_after: int = 0
+	for tweet in new_dataset:
+		if tweet.country_code is not None and tweet.continent is not None:
+			num_tweets_with_location_before += 1
+		tweet.add_location(google_api)
+		if tweet.country_code is not None and tweet.continent is not None:
+			num_tweets_with_location_after += 1
+	print(f'Number of tweets with location before: {num_tweets_with_location_before}')
+	print(f'Number of tweets with location after: {num_tweets_with_location_after}')
+	# save new dataset
+	save_tweets(new_dataset, 'tweets/new_dataset.pickle')
 
-		# define keywords
-		# keywords = COVID_KEYWORDS[:2]  # corona and covid
-		keywords = COVID_KEYWORDS + COVID_FAKE_KEYWORDS
+	######################
+	# 3. TRAIN CLASSIFIERS
+	######################
+	print('\n3. TRAIN CLASSIFIERS')
+	# define keywords
+	# COVID_KEYWORDS: List[str] = [
+	# 	'corona', 'covid', 'quaranteen', 'home', 'stay', 'inside', 'virology', 'doctor', 'nurse', 'virus', 'grandma',
+	# 	'vaccin', 'sars', 'alone', 'strongtogether', 'elbow', 'mouth mask', 'protective equipment', 'hospitalization',
+	# 	'increas', 'death', 'dead', 'impact', 'ICU', 'intensive care', 'applause', 'stay healthy', 'take care', 'risk',
+	# 	'risk group', 'environment',
+	# 	'U+1F637',  # Medical Mask Emoji
+	# 	'U+1F691',  # Amublance Emoji
+	# 	'U+1F92E',  # Vomiting Emoji
+	# 	'U+1F912',  # Thermometer Emoji
+	# ]
+	# COVID_FAKE_KEYWORDS: List[str] = [
+	# 	'coronascam', 'fakecorona', 'fake', 'coronahoax', 'hoaxcorona', 'gooutside', 'donotstayhome''fuckvirology',
+	# 	'donttrustvirologists', 'coronadoesntexist', 'chinesevirushoax',
+	# ]
+	# load train dataset
+	train_dataset = load_tweets('tweets/train_dataset.pickle')
+	# pre-process train dataset
+	X: List[str] = [tweet.text for tweet in train_dataset]
+	X: List[str] = preprocess_corpus(X)
+	labels: List[bool] = [tweet.denier for tweet in train_dataset]
 
-		# get all tweets in a list
-		tweets: List[Tweet] = get_tweets(api, num_tweets, keywords, language='en')
-		with open(tweets_path, 'wb') as f:
-			pickle.dump(tweets, f)
+	# train on part of the data
+	# train, validation split
+	X_train, X_test, y_train, y_test = train_test_split(X, labels, test_size=0.2)
+	# vectorize
+	vectorizer: CountVectorizer = CountVectorizer()
+	X_train = vectorizer.fit_transform(X_train)
+	X_test = vectorizer.transform(X_test)
 
-		tweets_with_place: List[Tweet] = [tweet for tweet in tweets if tweet.country_code is not None]
-		with open(tweets_places_path, 'wb') as f:
-			pickle.dump(tweets_with_place, f)
-	else:
-		with open(tweets_path, 'rb') as f:
-			tweets = pickle.load(f)
+	# create Complement Naive Bayes classifier
+	model_bayes = ComplementNB()
+	# train Complement Naive Bayes classifier
+	model_bayes = model_bayes.fit(X_train, y_train)
+	# validate Complement Naive Bayes classifier
+	naive_bayes_accuracy: float = model_bayes.score(X_test, y_test)
+	print(f'Naive Bayes accuracy:\t{naive_bayes_accuracy * 100:>3.2f}%')
 
-		with open(tweets_places_path, 'rb') as f:
-			tweets_with_place = pickle.load(f)
+	# create Decision Tree classifier
+	model_tree = DecisionTreeClassifier()
+	# train Decision Tree classifier
+	model_tree = model_tree.fit(X_train, y_train)
+	# validate Decision Tree classifier
+	decision_tree_accuracy: float = model_tree.score(X_test, y_test)
+	print(f'Decision Tree accuracy:\t{decision_tree_accuracy * 100:>3.2f}%')
 
-	print(f'number of tweets: {len(tweets)}')
-	# print(tweets[0])
-	print(f'number of tweets with a place: {len(tweets_with_place)}')
-	# print(tweets_with_place[0])
+	# retrain best model on all of the data
+	# vectorize
+	vectorizer: CountVectorizer = CountVectorizer()
+	X: List[str] = vectorizer.fit_transform(X)
+	best_model = ComplementNB().fit(X, labels) \
+		if naive_bayes_accuracy >= decision_tree_accuracy \
+		else DecisionTreeClassifier().fit(X, labels)
 
-	# Prediction
-	df_nb = nlp.predict_naive_bayes(tweets)
-	df_dt = nlp.predict_decision_tree(tweets)
-	print("Naive Bayes Prediction: \n")
-	print(df_nb[['text', 'denier']])
-	print("\n\n\nDecision Tree Prediction: \n")
-	print(df_dt[['text', 'denier']])
+	#####################
+	# 4. MAKE PREDICTIONS
+	#####################
+	print('\n4. USE CLASSIFIERS')
+	# load test dataset
+	test_dataset = load_tweets('tweets/test_dataset.pickle')
 
+	# pre-processing
+	X: List[str] = [tweet.text for tweet in test_dataset]
+	X: List[str] = preprocess_corpus(X)
+	# vectorize
+	X = vectorizer.transform(X)
+	# make predictions
+	y = best_model.predict(X)
+
+	# add predictions to tweet
+	for tweet, label in zip(test_dataset, y):
+		tweet.denier = label
+
+	########################
+	# 5. USE VARIOUS FILTERS
+	########################
+	print('\n5. USE VARIOUS FILTERS')
+	# TODO: implement filters
+
+	##############
+	# 6. VISUALIZE
+	##############
+	print('\n6. VISUALIZE')
+	# continents
+	CONTINENTS: Dict[str, str] = {
+		'Asia': 'asia',
+		'Europe': 'europe',
+		'Africa': 'africa',
+		'North America': 'north_america',
+		'South America': 'south_america',
+		'Oceania': 'oceania',
+		'Antarctica': 'antartica',
+	}
+
+	# create series to plot
 	num_tweets_per_country_per_continent_absolute = defaultdict(lambda: defaultdict(int))
 	num_tweets_per_country_absolute = defaultdict(lambda: defaultdict(int))
 	num_tweets_per_continent_absolute = defaultdict(lambda: defaultdict(int))
-	for tweet in tweets_with_place:
-		country_code: str = tweet.country_code.lower()
-		continent: str = CONTINENTS[tweet.continent]
+	for tweet in test_dataset:
+		if tweet.has_location():
+			country_code: str = tweet.country_code.lower()
+			continent: str = CONTINENTS[tweet.continent]
 
-		num_tweets_per_country_per_continent_absolute[tweet.continent][country_code] += 1
-		num_tweets_per_country_absolute['World'][country_code] += 1
-		num_tweets_per_continent_absolute['World'][continent] += 1
+			num_tweets_per_country_per_continent_absolute[tweet.continent][country_code] += 1
+			num_tweets_per_country_absolute['World'][country_code] += 1
+			num_tweets_per_continent_absolute['World'][continent] += 1
 
-	# visualization
+	# visualize plots
 	title = 'Absolute number of tweets per country and per continent'
 	series = num_tweets_per_country_per_continent_absolute
 	filename = 'num_tweets_per_country_per_continent_absolute'
@@ -86,7 +194,51 @@ def main():
 	visualize(title, series, filename, per_continent=True)
 
 
-def connect(consumer_key: str, consumer_secret: str, access_token: str, access_token_secret: str) -> tweepy.API:
+def read_twitter_tokens(path: str) -> Tuple[str, str, str, str]:
+	"""
+	Read Twitter tokens from a text file.
+
+	Parameters
+	----------
+	path : str
+	    The path to the text file
+
+	Returns
+	-------
+	str
+	    A tuple of Twitter tokens
+	"""
+	with open(path) as file:
+		consumer_key: str = file.readline().strip()
+		consumer_secret: str = file.readline().strip()
+		access_token: str = file.readline().strip()
+		access_token_secret: str = file.readline().strip()
+
+		return consumer_key, consumer_secret, access_token, access_token_secret
+
+
+def read_google_token(path: str) -> str:
+	"""
+	Read Google token from a text file.
+
+	Parameters
+	----------
+	path : str
+	    The path to the text file
+
+	Returns
+	-------
+	str
+	    The Google token
+	"""
+	with open(path) as file:
+		geocoding_api_key: str = file.readline().strip()
+
+		return geocoding_api_key
+
+
+def connect_to_twitter_api(consumer_key: str, consumer_secret: str, access_token: str,
+                           access_token_secret: str) -> tweepy.API:
 	"""
 	Connect to the Twitter API.
 
@@ -117,35 +269,33 @@ def connect(consumer_key: str, consumer_secret: str, access_token: str, access_t
 	return api
 
 
-def get_tweets(api: tweepy.API, num_tweets: int, keywords: List[str], language: str = 'en') -> List[Tweet]:
+def get_new_tweets(twitter_api: tweepy.API, keywords: Dict[str, int], language: str = 'en') -> List[Tweet]:
 	"""
 	Get latest tweets from Twitter and create a list of Tweet Objects.
 
 	Parameters
 	----------
-	api : tweepy.API
+	twitter_api : tweepy.API
 	    The object to interact with the Twitter API
-	num_tweets : int
-	    The number of tweets to collect
-	keywords : List[str]
-	    The keywords on which to filter tweets
+	keywords : Dict[str,int]
+	    The keywords on which to filter tweets and their corresponding number of tweets to retrieve
 	language : str
 	    The language on which to filter tweets
 
 	Returns
 	-------
-	tweets : 'tweepy.models.ResultSet
-		A list of Tweet objects containing the latest number_of_tweets tweets.
+	tweets : List[Tweet]
+		A list of Tweet objects containing the latest tweets
 	"""
 	tweets = []
-	for keyword in keywords:
+	for keyword, number in keywords.items():
 		searched_tweets = []
 		last_id = -1
-		while len(searched_tweets) < num_tweets:
-			count = num_tweets - len(searched_tweets)
+		while len(searched_tweets) < number:
+			count = number - len(searched_tweets)
 			try:
-				new_tweets = api.search(q=f'{keyword} -filter:retweets', lang=language, tweet_mode='extended',
-				                        count=count, max_id=str(last_id - 1))
+				new_tweets = twitter_api.search(q=f'{keyword} -filter:retweets', lang=language, tweet_mode='extended',
+				                                count=count, max_id=str(last_id - 1))
 				if not new_tweets:
 					break
 				searched_tweets.extend(new_tweets)
@@ -153,80 +303,130 @@ def get_tweets(api: tweepy.API, num_tweets: int, keywords: List[str], language: 
 			except tweepy.TweepError:
 				break
 		tweets.extend([Tweet(status) for status in searched_tweets])
-		print("Keyword '" + str(keyword) + "' finished with number of tweets = " + str(len(tweets)))
+		print(f'\tKeyword \'{keyword}\' finished, got {len(searched_tweets)} new tweets')
+
+	print(f'Got {len(tweets)} new tweets in totoal')
 
 	return tweets
 
 
+def save_tweets(tweets: List[Tweet], path: str) -> None:
+	"""
+	Save tweets to a pickle file.
+
+	Parameters
+	----------
+	tweets : List[Tweet]
+		The tweets to be saved
+	path : str
+	    The path to the pickle file
+	"""
+	with open(path, 'wb') as file:
+		pickle.dump(tweets, file)
+		print(f'Saved {len(tweets)} tweets to {path}')
+
+
+def load_tweets(path: str) -> List[Tweet]:
+	"""
+	Load tweets from a pickle file.
+
+	Parameters
+	----------
+	path : str
+	    The path to the pickle file
+
+	Returns
+	-------
+	List[Tweets]
+	    The list of tweets, loaded from the pickle file
+	"""
+	with open(path, 'rb') as file:
+		tweets: List[Tweet] = pickle.load(file)
+		print(f'Loaded {len(tweets)} tweets from {path}')
+
+		return tweets
+
+
+def save_model(model: Union[ComplementNB, DecisionTreeClassifier], path: str) -> None:
+	"""
+	Save model to a pickle file.
+
+	Parameters
+	----------
+	model : Union[ComplementNB, DecisionTreeClassifier]
+		The model to be saved
+	path : str
+	    The path to the pickle file
+	"""
+	with open(path, 'wb') as file:
+		pickle.dump(model, file)
+		print(f'Saved model to {path}')
+
+
+def load_model(path: str) -> Union[ComplementNB, DecisionTreeClassifier]:
+	"""
+	Load a model from a pickle file.
+
+	Parameters
+	----------
+	path : str
+	    The path to the pickle file
+
+	Returns
+	-------
+	Union[ComplementNB, DecisionTreeClassifier]
+	    The model, loaded from the pickle file
+	"""
+	with open(path, 'rb') as file:
+		model: Union[ComplementNB, DecisionTreeClassifier] = pickle.load(file)
+		print(f'Loaded model from {path}')
+
+		return model
+
+
+def preprocess_corpus(corpus: List[str]) -> List[str]:
+	"""
+    Preprocess nlp corpus
+
+    Parameters
+    ----------
+    corpus : List[str]
+        list of tweet texts
+
+    Returns
+    -------
+    final_corpus : List[str]
+        list of tweet texts, but processed
+    """
+	# Download the English stop words from the NLTK repository.
+	nltk.download('stopwords', quiet=True)
+	# Removing the links from the tweets (starting with https:// until a space)
+	corpus_no_url = [re.sub('(https://)\S*(\s|$)', '', line) for line in corpus]
+	# Removing stopwords from English language
+	stopWords = set(stopwords.words('english'))
+	corpus_no_stops_no_url = [" ".join([re.sub('\n', "", l) for l in line.split(" ") if l not in stopWords]) for line in
+	                          corpus_no_url]
+	# Removing @...
+	corpus_noAt_no_stops_no_url = [re.sub('(@)\S*(\s|$)', '', line) for line in corpus_no_stops_no_url]
+	# Remove #
+	corpus_noht_noAt_no_stops_no_url = [re.sub('#', '', line) for line in corpus_noAt_no_stops_no_url]
+	# Set lowercase
+	corpus_lowercase = [line.lower() for line in corpus_noht_noAt_no_stops_no_url]
+	# Remove numbers
+	corpus_no_numbers = [re.sub('[0-9]+', '', line) for line in corpus_lowercase]
+	final_corpus = corpus_no_numbers
+
+	# if debug_prints:
+	#     print("\n*** CORPUS BEFORE ***")
+	#     [print("\t* " + str(l)) for l in corpus[0:5]]
+	#     print()
+	#
+	#     print("\n\n*** CORPUS AFTER ***")
+	#     [print("\t* " + str(l)) for l in final_corpus[0:5]]
+	#     print()
+
+	return final_corpus
+
+
 if __name__ == "__main__":
-	COVID_KEYWORDS: List[str] = ['corona',
-	                             'covid',
-	                             'quaranteen',
-	                             'home',
-	                             'stay',
-	                             'inside',
-	                             'virology',
-	                             'doctor',
-	                             'nurse',
-	                             'virus',
-	                             'grandma',
-	                             'vaccin',
-	                             'sars',
-	                             'alone',
-	                             'strongtogether',
-	                             'elbow',
-	                             'mouth mask',
-	                             'protective equipment',
-	                             'hospitalization',
-	                             'increas',
-	                             'death',
-	                             'dead',
-	                             'impact',
-	                             'ICU',
-	                             'intensive care',
-	                             'applause',
-	                             'stay healthy',
-	                             'take care',
-	                             'risk',
-	                             'risk group',
-	                             'environment',
-	                             'U+1F637',  # Medical Mask Emoji
-	                             'U+1F691',  # Amublance Emoji
-	                             'U+1F92E',  # Vomiting Emoji
-	                             'U+1F912'  # Thermometer Emoji
-	                             ]
-
-	COVID_FAKE_KEYWORDS: List[str] = [
-		'coronascam',
-		'fakecorona',
-		'fake',
-		'coronahoax',
-		'hoaxcorona',
-		'gooutside',
-		'donotstayhome'
-		'fuckvirology',
-		'donttrustvirologists',
-		'coronadoesntexist',
-		'chinesevirushoax'
-	]
-
-	CONTINENTS: Dict[str, str] = {
-		'Asia': 'asia',
-		'Europe': 'europe',
-		'Africa': 'africa',
-		'North America': 'north_america',
-		'South America': 'south_america',
-		'Oceania': 'oceania',
-		'Antarctica': 'antartica',
-	}
-
-
-	LOAD: bool = True
-
-	# Use following paths for prediction showcase (contain acceptors and deniers, 1 tweet of each keyword)
-	# tweets_path: str = 'tweets/nlp/tweets_en_test_set_1.pickle'
-	# tweets_places_path: str = 'tweets/nlp/tweets_with_place_en_test_set_1.pickle'
-	tweets_path: str = 'tweets/nlp/tweets_en_test_set_1.pickle'
-	tweets_places_path: str = 'tweets/nlp/tweets_with_place_en_test_set_1.pickle'
-
 	main()
