@@ -1,9 +1,13 @@
 import pickle
 from collections import defaultdict
+from datetime import datetime
 from typing import List, Dict, Tuple, Union
 
 import nltk
 import tweepy
+from filters import filter_by_hashtag, filter_by_hashtags_all, filter_by_hashtags_any, filter_before, filter_at, filter_after, filter_between, \
+	filter_by_country_code, filter_by_country_codes, filter_by_continent, filter_by_continents, sort_by_date_ascending, \
+	sort_by_date_descending, group_by_country_code, group_by_continent
 from geopy import GoogleV3
 from nltk import re
 from nltk.corpus import stopwords
@@ -17,15 +21,14 @@ from visualization import visualize
 
 def main():
 	print()
-	#################################
+	########################
 	# 1. GET NEW DATASET
-	# 2. ADD LOCATION TO THOSE TWEETS
+	# 2. ADD LOCATIONS
 	# 3. TRAIN CLASSIFIERS
 	# 4. MAKE PREDICTIONS
-	# 5. USE VARIOUS FILTERS
+	# 5. FILTER, SORT, GROUP
 	# 6. VISUALIZE
-	#################################
-
+	########################
 
 	####################
 	# 1. GET NEW DATASET
@@ -36,40 +39,6 @@ def main():
 	# connect with the Twitter API
 	twitter_api: tweepy.API = connect_to_twitter_api(consumer_key, consumer_secret, access_token, access_token_secret)
 	# define keywords
-	keywords: Dict[str, int] = {
-		'covid': 5,  # get 5 tweets with 'covid' in it
-		'coronahoax': 10,  # get 10 with 'coronahoax' in it
-	}
-	# get new dataset
-	new_dataset: List[Tweet] = get_new_tweets(twitter_api, keywords)
-	print(f'First tweet:\n{new_dataset[0]}')
-
-	#################################
-	# 2. ADD LOCATION TO THOSE TWEETS
-	#################################
-	print('\n2. ADD LOCATION TO THOSE TWEETS')
-	# read Google token
-	geocoding_api_key: str = read_google_token('tokens/google_token.txt')
-	# initialize Google API
-	google_api: GoogleV3 = GoogleV3(api_key=geocoding_api_key)
-	# add location to tweets when possible
-	num_tweets_with_location_before: int = 0
-	num_tweets_with_location_after: int = 0
-	for tweet in new_dataset:
-		if tweet.country_code is not None and tweet.continent is not None:
-			num_tweets_with_location_before += 1
-		tweet.add_location(google_api)
-		if tweet.country_code is not None and tweet.continent is not None:
-			num_tweets_with_location_after += 1
-	print(f'Number of tweets with location before: {num_tweets_with_location_before}')
-	print(f'Number of tweets with location after: {num_tweets_with_location_after}')
-	# save new dataset
-	save_tweets(new_dataset, 'tweets/new_dataset.pickle')
-
-	######################
-	# 3. TRAIN CLASSIFIERS
-	######################
-	print('\n3. TRAIN CLASSIFIERS')
 	# define keywords
 	# COVID_KEYWORDS: List[str] = [
 	# 	'corona', 'covid', 'quaranteen', 'home', 'stay', 'inside', 'virology', 'doctor', 'nurse', 'virus', 'grandma',
@@ -85,6 +54,43 @@ def main():
 	# 	'coronascam', 'fakecorona', 'fake', 'coronahoax', 'hoaxcorona', 'gooutside', 'donotstayhome''fuckvirology',
 	# 	'donttrustvirologists', 'coronadoesntexist', 'chinesevirushoax',
 	# ]
+	keywords: Dict[str, int] = {
+		'covid': 10,  # get 100 tweets with 'covid' in it
+		'corona': 10,  # get 100 tweet with 'corona' in it
+		'coronahoax': 10,  # get tweets 100 with 'coronahoax' in it
+	}
+	# get new dataset
+	new_dataset: List[Tweet] = get_new_tweets(twitter_api, keywords)
+	print(f'First tweet:\n{new_dataset[0]}')
+	# save new dataset
+	save_tweets(new_dataset, 'tweets/new_dataset.pickle')
+
+	##################
+	# 2. ADD LOCATIONS
+	##################
+	# print('\n2. ADD LOCATION TO THOSE TWEETS')
+	# # read Google token
+	# geocoding_api_key: str = read_google_token('tokens/google_token.txt')
+	# # initialize Google API
+	# google_api: GoogleV3 = GoogleV3(api_key=geocoding_api_key)
+	# # add location to tweets when possible
+	# num_tweets_with_location_before: int = 0
+	# num_tweets_with_location_after: int = 0
+	# for tweet in new_dataset:
+	# 	if tweet.country_code is not None and tweet.continent is not None:
+	# 		num_tweets_with_location_before += 1
+	# 	tweet.add_location(google_api)
+	# 	if tweet.country_code is not None and tweet.continent is not None:
+	# 		num_tweets_with_location_after += 1
+	# print(f'Number of tweets with location before: {num_tweets_with_location_before}')
+	# print(f'Number of tweets with location after: {num_tweets_with_location_after}')
+	# # save new dataset with locations included
+	# save_tweets(new_dataset, 'tweets/new_dataset.pickle')
+
+	######################
+	# 3. TRAIN CLASSIFIERS
+	######################
+	print('\n3. TRAIN CLASSIFIERS')
 	# load train dataset
 	train_dataset = load_tweets('tweets/train_dataset.pickle')
 	# pre-process train dataset
@@ -101,20 +107,24 @@ def main():
 	X_test = vectorizer.transform(X_test)
 
 	# create Complement Naive Bayes classifier
-	model_bayes = ComplementNB()
+	naive_bayes_classifier = ComplementNB()
 	# train Complement Naive Bayes classifier
-	model_bayes = model_bayes.fit(X_train, y_train)
+	naive_bayes_classifier = naive_bayes_classifier.fit(X_train, y_train)
 	# validate Complement Naive Bayes classifier
-	naive_bayes_accuracy: float = model_bayes.score(X_test, y_test)
+	naive_bayes_accuracy: float = naive_bayes_classifier.score(X_test, y_test)
 	print(f'Naive Bayes accuracy:\t{naive_bayes_accuracy * 100:>3.2f}%')
+	# save Naive Bayes classifier
+	save_model(naive_bayes_classifier, 'models/naive_bayes.pickle')
 
 	# create Decision Tree classifier
-	model_tree = DecisionTreeClassifier()
+	decision_tree_classifier = DecisionTreeClassifier()
 	# train Decision Tree classifier
-	model_tree = model_tree.fit(X_train, y_train)
+	decision_tree_classifier = decision_tree_classifier.fit(X_train, y_train)
 	# validate Decision Tree classifier
-	decision_tree_accuracy: float = model_tree.score(X_test, y_test)
+	decision_tree_accuracy: float = decision_tree_classifier.score(X_test, y_test)
 	print(f'Decision Tree accuracy:\t{decision_tree_accuracy * 100:>3.2f}%')
+	# save Decision Tree classifier
+	save_model(decision_tree_classifier, 'models/decision_tree.pickle')
 
 	# retrain best model on all of the data
 	# vectorize
@@ -123,6 +133,8 @@ def main():
 	best_model = ComplementNB().fit(X, labels) \
 		if naive_bayes_accuracy >= decision_tree_accuracy \
 		else DecisionTreeClassifier().fit(X, labels)
+	# save best mode
+	save_model(best_model, 'models/best_model.pickle')
 
 	#####################
 	# 4. MAKE PREDICTIONS
@@ -144,10 +156,25 @@ def main():
 		tweet.denier = label
 
 	########################
-	# 5. USE VARIOUS FILTERS
+	# 5. FILTER, SORT, GROUP
 	########################
 	print('\n5. USE VARIOUS FILTERS')
-	# TODO: implement filters
+	# use filters
+	tweets_filtered_by_hashtag: List[Tweet] = filter_by_hashtag(test_dataset, '#coronahoax')
+	tweets_filtered_by_hashtags_all: List[Tweet] = filter_by_hashtags_all(test_dataset, ['#corona', '#coronahoax'])
+	tweets_filtered_by_hashtags_any: List[Tweet] = filter_by_hashtags_any(test_dataset, ['#corona', '#coronahoax', '#coronavirus', '#covid19'])
+	tweets_filtered_before: List[Tweet] = filter_before(test_dataset, datetime(2020, 4, 19, 18, 58, 46))
+	tweets_filtered_at: List[Tweet] = filter_at(test_dataset, datetime(2020, 4, 19, 18, 58, 46))
+	tweets_filtered_after: List[Tweet] = filter_after(test_dataset, datetime(2020, 4, 19, 18, 58, 46))
+	tweets_filtered_between: List[Tweet] = filter_between(test_dataset, datetime(2020, 4, 19, 18, 0, 0), datetime(2020, 4, 19, 19, 0, 0))
+	tweets_filtered_by_country_code: List[Tweet] = filter_by_country_code(test_dataset, 'US')
+	tweets_filtered_by_country_codes: List[Tweet] = filter_by_country_codes(test_dataset, ['US', 'GB'])
+	tweets_filtered_by_continent: List[Tweet] = filter_by_continent(test_dataset, 'Europe')
+	tweets_filtered_by_continents: List[Tweet] = filter_by_continents(test_dataset, ['Europe', 'North America'])
+	tweets_sorted_by_date_ascending: List[Tweet] = sort_by_date_ascending(test_dataset)
+	tweets_sorted_by_date_descending: List[Tweet] = sort_by_date_descending(test_dataset)
+	tweets_grouped_by_country_code: defaultdict = group_by_country_code(test_dataset)
+	tweets_grouped_by_continent: defaultdict = group_by_continent(test_dataset)
 
 	##############
 	# 6. VISUALIZE
@@ -305,7 +332,7 @@ def get_new_tweets(twitter_api: tweepy.API, keywords: Dict[str, int], language: 
 		tweets.extend([Tweet(status) for status in searched_tweets])
 		print(f'\tKeyword \'{keyword}\' finished, got {len(searched_tweets)} new tweets')
 
-	print(f'Got {len(tweets)} new tweets in totoal')
+	print(f'Got {len(tweets)} new tweets in total')
 
 	return tweets
 
