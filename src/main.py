@@ -282,7 +282,7 @@ def connect_to_twitter_api(consumer_key: str, consumer_secret: str, access_token
 
 	Returns
 	-------
-	api : tweepy.API
+	tweepy.API
 	    The object to interact with the Twitter API
 	"""
 
@@ -311,7 +311,7 @@ def get_new_tweets(twitter_api: tweepy.API, keywords: Dict[str, int], language: 
 
 	Returns
 	-------
-	tweets : List[Tweet]
+	List[Tweet]
 		A list of Tweet objects containing the latest tweets
 	"""
 	tweets = []
