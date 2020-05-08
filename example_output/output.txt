@@ -1,0 +1,33 @@
+1. GET NEW DATASET
+	Keyword 'covid' finished, got 100 new tweets
+	Keyword 'corona' finished, got 100 new tweets
+	Keyword 'coronahoax' finished, got 100 new tweets
+Got 300 new tweets in total
+First tweet:
+@ManlikeMaximus @duckfap @nibby123 @Keir_Starmer While that's a plausible hypothesis for a genetic component, it certainly doesn't qualify as scientific proof that people with darker skin are more vulnerable to covid.
+ 				Author:	Dan Largechin
+ 		        Username:	@AidanLargin
+ 		        Country code:	None
+ 		        Continent:	None
+ 		        Denier?	None
+Saved 300 tweets to tweets/new_dataset.pickle
+Number of tweets with location before: 6
+Number of tweets with location after: 178
+Saved 300 tweets to tweets/new_dataset.pickle
+
+3. TRAIN CLASSIFIERS
+Loaded 3874 tweets from tweets/train_dataset.pickle
+Naive Bayes accuracy:	95.61%
+Saved model to models/naive_bayes.pickle
+Decision Tree accuracy:	97.81%
+Saved model to models/decision_tree.pickle
+Saved model to models/best_model.pickle
+
+4. USE CLASSIFIERS
+Loaded 325 tweets from tweets/test_dataset.pickle
+
+5. USE VARIOUS FILTERS
+
+6. VISUALIZE
+
+Process finished with exit code 0
