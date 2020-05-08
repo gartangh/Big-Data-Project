@@ -19,8 +19,7 @@ from tweet import Tweet
 from visualization import visualize
 
 
-def main():
-	print()
+def demo():
 	##########################
 	# 1. GET NEW DATASET     #
 	# 2. ADD LOCATIONS       #
@@ -29,6 +28,7 @@ def main():
 	# 5. FILTER, SORT, GROUP #
 	# 6. VISUALIZE           #
 	##########################
+	print()
 
 	######################
 	# 1. GET NEW DATASET #
@@ -456,4 +456,4 @@ def preprocess_corpus(corpus: List[str]) -> List[str]:
 
 
 if __name__ == "__main__":
-	main()
+	demo()
