@@ -80,5 +80,6 @@ tweets/
 venv/
 *.txt
 *.svg
+*.png
 *.pickle
 *.zip
