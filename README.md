@@ -22,7 +22,6 @@ Our next step would be to zoom in cities and neighbourhoods to identify hotspots
 
 # Software requirements
 * Python 3.7.4
-  * TensorFlow 2.1.0
   * Tweepy 3.8.0
   * Scikit-learn 0.22.2
   * NLTK 3.4.5
