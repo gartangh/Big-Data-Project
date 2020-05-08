@@ -21,18 +21,18 @@ from visualization import visualize
 
 def main():
 	print()
-	########################
-	# 1. GET NEW DATASET
-	# 2. ADD LOCATIONS
-	# 3. TRAIN CLASSIFIERS
-	# 4. MAKE PREDICTIONS
-	# 5. FILTER, SORT, GROUP
-	# 6. VISUALIZE
-	########################
+	##########################
+	# 1. GET NEW DATASET     #
+	# 2. ADD LOCATIONS       #
+	# 3. TRAIN CLASSIFIERS   #
+	# 4. MAKE PREDICTIONS    #
+	# 5. FILTER, SORT, GROUP #
+	# 6. VISUALIZE           #
+	##########################
 
-	####################
-	# 1. GET NEW DATASET
-	####################
+	######################
+	# 1. GET NEW DATASET #
+	######################
 	print('\n1. GET NEW DATASET')
 	# read Twitter tokens
 	consumer_key, consumer_secret, access_token, access_token_secret = read_twitter_tokens('tokens/twitter_tokens.txt')
@@ -55,9 +55,9 @@ def main():
 	# 	'donttrustvirologists', 'coronadoesntexist', 'chinesevirushoax',
 	# ]
 	keywords: Dict[str, int] = {
-		'covid': 10,  # get 100 tweets with 'covid' in it
-		'corona': 10,  # get 100 tweet with 'corona' in it
-		'coronahoax': 10,  # get tweets 100 with 'coronahoax' in it
+		'covid': 100,  # get 100 tweets with 'covid' in it
+		'corona': 100,  # get 100 tweet with 'corona' in it
+		'coronahoax': 100,  # get tweets 100 with 'coronahoax' in it
 	}
 	# get new dataset
 	new_dataset: List[Tweet] = get_new_tweets(twitter_api, keywords)
@@ -65,31 +65,31 @@ def main():
 	# save new dataset
 	save_tweets(new_dataset, 'tweets/new_dataset.pickle')
 
-	##################
-	# 2. ADD LOCATIONS
-	##################
-	# print('\n2. ADD LOCATION TO THOSE TWEETS')
-	# # read Google token
-	# geocoding_api_key: str = read_google_token('tokens/google_token.txt')
-	# # initialize Google API
-	# google_api: GoogleV3 = GoogleV3(api_key=geocoding_api_key)
-	# # add location to tweets when possible
-	# num_tweets_with_location_before: int = 0
-	# num_tweets_with_location_after: int = 0
-	# for tweet in new_dataset:
-	# 	if tweet.country_code is not None and tweet.continent is not None:
-	# 		num_tweets_with_location_before += 1
-	# 	tweet.add_location(google_api)
-	# 	if tweet.country_code is not None and tweet.continent is not None:
-	# 		num_tweets_with_location_after += 1
-	# print(f'Number of tweets with location before: {num_tweets_with_location_before}')
-	# print(f'Number of tweets with location after: {num_tweets_with_location_after}')
-	# # save new dataset with locations included
-	# save_tweets(new_dataset, 'tweets/new_dataset.pickle')
+	####################
+	# 2. ADD LOCATIONS #
+	####################
+	print('\n2. ADD LOCATION TO THOSE TWEETS')
+	# read Google token
+	geocoding_api_key: str = read_google_token('tokens/google_token.txt')
+	# initialize Google API
+	google_api: GoogleV3 = GoogleV3(api_key=geocoding_api_key)
+	# add location to tweets when possible
+	num_tweets_with_location_before: int = 0
+	num_tweets_with_location_after: int = 0
+	for tweet in new_dataset:
+		if tweet.country_code is not None and tweet.continent is not None:
+			num_tweets_with_location_before += 1
+		tweet.add_location(google_api)
+		if tweet.country_code is not None and tweet.continent is not None:
+			num_tweets_with_location_after += 1
+	print(f'Number of tweets with location before: {num_tweets_with_location_before}')
+	print(f'Number of tweets with location after: {num_tweets_with_location_after}')
+	# save new dataset with locations included
+	save_tweets(new_dataset, 'tweets/new_dataset.pickle')
 
-	######################
-	# 3. TRAIN CLASSIFIERS
-	######################
+	########################
+	# 3. TRAIN CLASSIFIERS #
+	########################
 	print('\n3. TRAIN CLASSIFIERS')
 	# load train dataset
 	train_dataset = load_tweets('tweets/train_dataset.pickle')
@@ -136,9 +136,9 @@ def main():
 	# save best mode
 	save_model(best_model, 'models/best_model.pickle')
 
-	#####################
-	# 4. MAKE PREDICTIONS
-	#####################
+	#######################
+	# 4. MAKE PREDICTIONS #
+	#######################
 	print('\n4. USE CLASSIFIERS')
 	# load test dataset
 	test_dataset = load_tweets('tweets/test_dataset.pickle')
@@ -155,9 +155,9 @@ def main():
 	for tweet, label in zip(test_dataset, y):
 		tweet.denier = label
 
-	########################
-	# 5. FILTER, SORT, GROUP
-	########################
+	##########################
+	# 5. FILTER, SORT, GROUP #
+	##########################
 	print('\n5. USE VARIOUS FILTERS')
 	# use filters
 	tweets_filtered_by_hashtag: List[Tweet] = filter_by_hashtag(test_dataset, '#coronahoax')
@@ -176,9 +176,9 @@ def main():
 	tweets_grouped_by_country_code: defaultdict = group_by_country_code(test_dataset)
 	tweets_grouped_by_continent: defaultdict = group_by_continent(test_dataset)
 
-	##############
-	# 6. VISUALIZE
-	##############
+	################
+	# 6. VISUALIZE #
+	################
 	print('\n6. VISUALIZE')
 	# continents
 	CONTINENTS: Dict[str, str] = {
